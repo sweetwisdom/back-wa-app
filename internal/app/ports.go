@@ -155,6 +155,8 @@ type EngineAccountSettingsInput struct {
 	LocaleLanguage       string
 	LocaleCountry        string
 	Code                 string
+	DisplayName          string
+	ProfilePicture       []byte
 }
 
 type EngineContactResolveInput struct {
@@ -261,9 +263,11 @@ type EngineDecryptResult struct {
 }
 
 type EngineAccountSettingsResult struct {
-	Status   waappv1.AccountSettingsOperationStatus
-	WaitTime time.Duration
-	Err      error
+	Status           waappv1.AccountSettingsOperationStatus
+	WaitTime         time.Duration
+	ProfilePictureID string
+	HasStaging       bool
+	Err              error
 }
 
 type EngineContactResolveResult struct {

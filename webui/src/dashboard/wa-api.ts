@@ -1,4 +1,4 @@
-import type { RequestAccountEmailOtpResponse, SetAccountEmailResponse, SetTwoFactorAuthSettingsResponse, VerifyAccountEmailOtpResponse } from '../proto/byte/v/forge/waapp/v1/account_settings';
+import type { RemoveAccountProfilePictureResponse, RequestAccountEmailOtpResponse, SetAccountEmailResponse, SetAccountProfileNameResponse, SetAccountProfilePictureResponse, SetTwoFactorAuthSettingsResponse, VerifyAccountEmailOtpResponse } from '../proto/byte/v/forge/waapp/v1/account_settings';
 import type { DeleteWAContactResponse, ListWAContactsResponse, ResolveWAContactsResponse } from '../proto/byte/v/forge/waapp/v1/contacts';
 import type { ListAccountOtpMessagesResponse } from '../proto/byte/v/forge/waapp/v1/extraction';
 import type { DeleteAccountMessagesResponse, GetLongConnectionStatusResponse, ListAccountMessagesResponse, LongConnectionState, MarkAccountMessagesReadResponse } from '../proto/byte/v/forge/waapp/v1/messaging';
@@ -111,11 +111,25 @@ export async function requestWaAccountEmailOtp(account: WAAccount) {
 export async function verifyWaAccountEmailOtp(account: WAAccount, code: string) {
   return requireAccountSettingsResponse(await api<VerifyAccountEmailOtpResponse>('/api/wa/account-settings/email/otp/verify', { method: 'POST', body: JSON.stringify({ ...waAccountSettingsPayload(account), code }) }));
 }
+export async function setWaAccountProfileName(account: WAAccount, displayName: string) {
+  return requireAccountSettingsResponse(await api<SetAccountProfileNameResponse>('/api/wa/account-settings/profile/name', { method: 'POST', body: JSON.stringify({ selector: waAccountSettingsSelector(account), display_name: displayName }) }));
+}
+export async function setWaAccountProfilePicture(account: WAAccount, input: { image_base64: string; content_type: string }) {
+  return requireAccountSettingsResponse(await api<SetAccountProfilePictureResponse>('/api/wa/account-settings/profile/picture', { method: 'POST', body: JSON.stringify({ selector: waAccountSettingsSelector(account), image: input.image_base64, content_type: input.content_type }) }));
+}
+export async function removeWaAccountProfilePicture(account: WAAccount) {
+  return requireAccountSettingsResponse(await api<RemoveAccountProfilePictureResponse>('/api/wa/account-settings/profile/picture/remove', { method: 'POST', body: JSON.stringify({ selector: waAccountSettingsSelector(account) }) }));
+}
 
 export const waAccountID = (account?: WAAccount) => account?.wa_account_id || '';
 export const waAccountTitle = (account?: WAAccount) => account?.phone?.e164_number || waAccountID(account) || '-';
 
 function waAccountSettingsPayload(account: WAAccount) {
+  const accountID = waAccountID(account);
+  if (!accountID) throw new Error('wa_account_id is required');
+  return { wa_account_id: accountID };
+}
+function waAccountSettingsSelector(account: WAAccount) {
   const accountID = waAccountID(account);
   if (!accountID) throw new Error('wa_account_id is required');
   return { wa_account_id: accountID };

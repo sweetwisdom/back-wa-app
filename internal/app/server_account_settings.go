@@ -5,11 +5,14 @@ import (
 	"net/mail"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	waappv1 "github.com/byte-v-forge/wa-app/gen/go/byte/v/forge/waapp/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+const accountProfileNameMaxRunes = 25
 
 func (s *Server) SetTwoFactorAuthSettings(ctx context.Context, req *waappv1.SetTwoFactorAuthSettingsRequest) (*waappv1.SetTwoFactorAuthSettingsResponse, error) {
 	if err := validateContext(req.GetContext()); err != nil {
@@ -98,10 +101,62 @@ func (s *Server) VerifyAccountEmailOtp(ctx context.Context, req *waappv1.VerifyA
 	return &waappv1.VerifyAccountEmailOtpResponse{Operation: op, Error: op.GetError()}, nil
 }
 
+func (s *Server) SetAccountProfileName(ctx context.Context, req *waappv1.SetAccountProfileNameRequest) (*waappv1.SetAccountProfileNameResponse, error) {
+	if err := validateContext(req.GetContext()); err != nil {
+		return &waappv1.SetAccountProfileNameResponse{Error: ToProtoError(err)}, nil
+	}
+	displayName, err := requiredAccountProfileName(req.GetDisplayName())
+	if err != nil {
+		return &waappv1.SetAccountProfileNameResponse{Error: ToProtoError(err)}, nil
+	}
+	op, err := s.applyAccountSettings(ctx, req.GetContext(), req.GetSelector(), waappv1.AccountSettingsOperationKind_ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_NAME_SET, func(input EngineAccountSettingsInput) EngineAccountSettingsInput {
+		input.DisplayName = displayName
+		return input
+	})
+	if err != nil {
+		return &waappv1.SetAccountProfileNameResponse{Error: ToProtoError(err)}, nil
+	}
+	return &waappv1.SetAccountProfileNameResponse{Operation: op, Error: op.GetError()}, nil
+}
+
+func (s *Server) SetAccountProfilePicture(ctx context.Context, req *waappv1.SetAccountProfilePictureRequest) (*waappv1.SetAccountProfilePictureResponse, error) {
+	if err := validateContext(req.GetContext()); err != nil {
+		return &waappv1.SetAccountProfilePictureResponse{Error: ToProtoError(err)}, nil
+	}
+	image, err := requiredAccountProfilePicture(req.GetImage(), req.GetContentType())
+	if err != nil {
+		return &waappv1.SetAccountProfilePictureResponse{Error: ToProtoError(err)}, nil
+	}
+	op, result, err := s.applyAccountSettingsResult(ctx, req.GetContext(), req.GetSelector(), waappv1.AccountSettingsOperationKind_ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_PICTURE_SET, func(input EngineAccountSettingsInput) EngineAccountSettingsInput {
+		input.ProfilePicture = image
+		return input
+	})
+	if err != nil {
+		return &waappv1.SetAccountProfilePictureResponse{Error: ToProtoError(err)}, nil
+	}
+	return &waappv1.SetAccountProfilePictureResponse{Operation: op, ProfilePictureId: result.ProfilePictureID, HasStaging: result.HasStaging, Error: op.GetError()}, nil
+}
+
+func (s *Server) RemoveAccountProfilePicture(ctx context.Context, req *waappv1.RemoveAccountProfilePictureRequest) (*waappv1.RemoveAccountProfilePictureResponse, error) {
+	if err := validateContext(req.GetContext()); err != nil {
+		return &waappv1.RemoveAccountProfilePictureResponse{Error: ToProtoError(err)}, nil
+	}
+	op, err := s.applyAccountSettings(ctx, req.GetContext(), req.GetSelector(), waappv1.AccountSettingsOperationKind_ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_PICTURE_REMOVE, nil)
+	if err != nil {
+		return &waappv1.RemoveAccountProfilePictureResponse{Error: ToProtoError(err)}, nil
+	}
+	return &waappv1.RemoveAccountProfilePictureResponse{Operation: op, Error: op.GetError()}, nil
+}
+
 func (s *Server) applyAccountSettings(ctx context.Context, requestContext *waappv1.RequestContext, selector *waappv1.AccountLoginSelector, kind waappv1.AccountSettingsOperationKind, enrich func(EngineAccountSettingsInput) EngineAccountSettingsInput) (*waappv1.AccountSettingsOperation, error) {
+	op, _, err := s.applyAccountSettingsResult(ctx, requestContext, selector, kind, enrich)
+	return op, err
+}
+
+func (s *Server) applyAccountSettingsResult(ctx context.Context, requestContext *waappv1.RequestContext, selector *waappv1.AccountLoginSelector, kind waappv1.AccountSettingsOperationKind, enrich func(EngineAccountSettingsInput) EngineAccountSettingsInput) (*waappv1.AccountSettingsOperation, EngineAccountSettingsResult, error) {
 	loginState, err := s.accountSettingsLoginState(ctx, selector)
 	if err != nil {
-		return nil, err
+		return nil, EngineAccountSettingsResult{}, err
 	}
 	input := EngineAccountSettingsInput{
 		WAAccountID:          loginState.GetWaAccountId(),
@@ -113,9 +168,9 @@ func (s *Server) applyAccountSettings(ctx context.Context, requestContext *waapp
 	if enrich != nil {
 		input = enrich(input)
 	}
-	runner, release, err := s.accountSettingsRunner(ctx, requestContext)
+	runner, release, err := s.accountSettingsRunner(ctx, requestContext, kind)
 	if err != nil {
-		return nil, err
+		return nil, EngineAccountSettingsResult{}, err
 	}
 	defer release()
 	result := runner.ApplyAccountSettings(ctx, input)
@@ -134,13 +189,13 @@ func (s *Server) applyAccountSettings(ctx context.Context, requestContext *waapp
 	if result.WaitTime > 0 {
 		op.WaitTime = durationpb.New(result.WaitTime)
 	}
-	return op, nil
+	return op, result, nil
 }
 
-func (s *Server) accountSettingsRunner(ctx context.Context, requestContext *waappv1.RequestContext) (ProtocolEngine, func(), error) {
+func (s *Server) accountSettingsRunner(ctx context.Context, requestContext *waappv1.RequestContext, kind waappv1.AccountSettingsOperationKind) (ProtocolEngine, func(), error) {
 	runner := s.runner
 	native, ok := runner.(*NativeEngine)
-	if !ok {
+	if !ok || !accountSettingsUsesGatewayProxy(kind) {
 		return runner, func() {}, nil
 	}
 	proxied, release, _ := s.optionalGatewayProxyEngine(ctx, native, gatewayProxyEngineRequest{
@@ -151,6 +206,10 @@ func (s *Server) accountSettingsRunner(ctx context.Context, requestContext *waap
 		Mode:          DynamicProxySessionModeSticky,
 	})
 	return proxied, release, nil
+}
+
+func accountSettingsUsesGatewayProxy(kind waappv1.AccountSettingsOperationKind) bool {
+	return kind != waappv1.AccountSettingsOperationKind_ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_NAME_SET
 }
 
 func (s *Server) accountSettingsLoginState(ctx context.Context, selector *waappv1.AccountLoginSelector) (*waappv1.LoginState, error) {
@@ -261,4 +320,28 @@ func accountSettingsLocale(value string, fallback string) string {
 		return fallback
 	}
 	return trimmed
+}
+
+func requiredAccountProfileName(value string) (string, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return "", NewError(waappv1.WaErrorCode_WA_ERROR_CODE_VALIDATION_FAILED, "display_name is required", false)
+	}
+	if utf8.RuneCountInString(trimmed) > accountProfileNameMaxRunes {
+		return "", NewError(waappv1.WaErrorCode_WA_ERROR_CODE_VALIDATION_FAILED, "display_name is too long", false)
+	}
+	return trimmed, nil
+}
+
+func requiredAccountProfilePicture(image []byte, contentType string) ([]byte, error) {
+	if len(image) == 0 {
+		return nil, NewError(waappv1.WaErrorCode_WA_ERROR_CODE_VALIDATION_FAILED, "image is required", false)
+	}
+	if len(image) > profilePictureDownloadMaxBytes {
+		return nil, NewError(waappv1.WaErrorCode_WA_ERROR_CODE_REJECTED, "WA profile picture is too large", false)
+	}
+	if _, err := profilePictureContentType(image, contentType); err != nil {
+		return nil, err
+	}
+	return append([]byte(nil), image...), nil
 }

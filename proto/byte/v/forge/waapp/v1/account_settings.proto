@@ -18,6 +18,9 @@ service WaAccountSettingsService {
   rpc SetAccountEmail(SetAccountEmailRequest) returns (SetAccountEmailResponse);
   rpc RequestAccountEmailOtp(RequestAccountEmailOtpRequest) returns (RequestAccountEmailOtpResponse);
   rpc VerifyAccountEmailOtp(VerifyAccountEmailOtpRequest) returns (VerifyAccountEmailOtpResponse);
+  rpc SetAccountProfileName(SetAccountProfileNameRequest) returns (SetAccountProfileNameResponse);
+  rpc SetAccountProfilePicture(SetAccountProfilePictureRequest) returns (SetAccountProfilePictureResponse);
+  rpc RemoveAccountProfilePicture(RemoveAccountProfilePictureRequest) returns (RemoveAccountProfilePictureResponse);
 }
 
 enum AccountSettingsOperationKind {
@@ -26,6 +29,9 @@ enum AccountSettingsOperationKind {
   ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_EMAIL_SET = 2;
   ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_EMAIL_OTP_REQUEST = 3;
   ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_EMAIL_OTP_VERIFY = 4;
+  ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_NAME_SET = 5;
+  ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_PICTURE_SET = 6;
+  ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_PICTURE_REMOVE = 7;
 }
 
 enum AccountSettingsOperationStatus {
@@ -104,6 +110,41 @@ message VerifyAccountEmailOtpRequest {
 }
 
 message VerifyAccountEmailOtpResponse {
+  AccountSettingsOperation operation = 1;
+  WaError error = 2;
+}
+
+message SetAccountProfileNameRequest {
+  RequestContext context = 1;
+  AccountLoginSelector selector = 2;
+  string display_name = 3;
+}
+
+message SetAccountProfileNameResponse {
+  AccountSettingsOperation operation = 1;
+  WaError error = 2;
+}
+
+message SetAccountProfilePictureRequest {
+  RequestContext context = 1;
+  AccountLoginSelector selector = 2;
+  bytes image = 3;
+  string content_type = 4;
+}
+
+message SetAccountProfilePictureResponse {
+  AccountSettingsOperation operation = 1;
+  string profile_picture_id = 2;
+  bool has_staging = 3;
+  WaError error = 4;
+}
+
+message RemoveAccountProfilePictureRequest {
+  RequestContext context = 1;
+  AccountLoginSelector selector = 2;
+}
+
+message RemoveAccountProfilePictureResponse {
   AccountSettingsOperation operation = 1;
   WaError error = 2;
 }

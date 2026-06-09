@@ -89,6 +89,57 @@ func (s *dashboardHTTP) handleVerifyAccountEmailOtp(w http.ResponseWriter, r *ht
 	writeProtoJSON(w, http.StatusOK, resp)
 }
 
+func (s *dashboardHTTP) handleSetAccountProfileName(w http.ResponseWriter, r *http.Request) {
+	if !s.requireAccountSettingsPost(w, r) {
+		return
+	}
+	req := &waappv1.SetAccountProfileNameRequest{}
+	if !readProtoJSONPayload(w, r, 1<<20, req, "request body must be a SetAccountProfileNameRequest JSON object") {
+		return
+	}
+	ensureAccountSettingsContext(&req.Context, "wa-account-profile-name")
+	resp, err := s.service.SetAccountProfileName(r.Context(), req)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "set WA account profile name failed"})
+		return
+	}
+	writeProtoJSON(w, http.StatusOK, resp)
+}
+
+func (s *dashboardHTTP) handleSetAccountProfilePicture(w http.ResponseWriter, r *http.Request) {
+	if !s.requireAccountSettingsPost(w, r) {
+		return
+	}
+	req := &waappv1.SetAccountProfilePictureRequest{}
+	if !readProtoJSONPayload(w, r, 4<<20, req, "request body must be a SetAccountProfilePictureRequest JSON object") {
+		return
+	}
+	ensureAccountSettingsContext(&req.Context, "wa-account-profile-picture")
+	resp, err := s.service.SetAccountProfilePicture(r.Context(), req)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "set WA account profile picture failed"})
+		return
+	}
+	writeProtoJSON(w, http.StatusOK, resp)
+}
+
+func (s *dashboardHTTP) handleRemoveAccountProfilePicture(w http.ResponseWriter, r *http.Request) {
+	if !s.requireAccountSettingsPost(w, r) {
+		return
+	}
+	req := &waappv1.RemoveAccountProfilePictureRequest{}
+	if !readProtoJSONPayload(w, r, 1<<20, req, "request body must be a RemoveAccountProfilePictureRequest JSON object") {
+		return
+	}
+	ensureAccountSettingsContext(&req.Context, "wa-account-profile-picture-remove")
+	resp, err := s.service.RemoveAccountProfilePicture(r.Context(), req)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "remove WA account profile picture failed"})
+		return
+	}
+	writeProtoJSON(w, http.StatusOK, resp)
+}
+
 func (s *dashboardHTTP) requireAccountSettingsPost(w http.ResponseWriter, r *http.Request) bool {
 	if r.Method != http.MethodPost {
 		methodNotAllowed(w, http.MethodPost)
@@ -108,6 +159,15 @@ func readAccountSettingsPayload(w http.ResponseWriter, r *http.Request) (map[str
 func accountSettingsRequestContext(payload map[string]any, prefix string) *waappv1.RequestContext {
 	return &waappv1.RequestContext{
 		RequestId: firstNonEmpty(textField(payload, "request_id"), newRequestID(prefix)),
+	}
+}
+
+func ensureAccountSettingsContext(ctx **waappv1.RequestContext, prefix string) {
+	if *ctx == nil {
+		*ctx = &waappv1.RequestContext{}
+	}
+	if (*ctx).RequestId == "" {
+		(*ctx).RequestId = newRequestID(prefix)
 	}
 }
 

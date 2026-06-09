@@ -8,6 +8,9 @@ import (
 )
 
 func (e *NativeEngine) ApplyAccountSettings(ctx context.Context, input EngineAccountSettingsInput) EngineAccountSettingsResult {
+	if input.Kind == waappv1.AccountSettingsOperationKind_ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_NAME_SET {
+		return EngineAccountSettingsResult{Status: waappv1.AccountSettingsOperationStatus_ACCOUNT_SETTINGS_OPERATION_STATUS_REJECTED, Err: NewError(waappv1.WaErrorCode_WA_ERROR_CODE_UNSUPPORTED_OPERATION, "WA profile name update requires app-state mutation sending and is not enabled", false)}
+	}
 	state, err := e.loadState(ctx, input.ClientProfileID)
 	if err != nil {
 		return EngineAccountSettingsResult{Status: waappv1.AccountSettingsOperationStatus_ACCOUNT_SETTINGS_OPERATION_STATUS_REJECTED, Err: err}
@@ -45,6 +48,10 @@ func buildAccountSettingsIQ(id string, input EngineAccountSettingsInput) chatdNo
 		return buildRequestAccountEmailOtpIQ(id, firstNonEmpty(input.LocaleLanguage, "en"), firstNonEmpty(input.LocaleCountry, "US"))
 	case waappv1.AccountSettingsOperationKind_ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_EMAIL_OTP_VERIFY:
 		return buildVerifyAccountEmailOtpIQ(id, input.Code)
+	case waappv1.AccountSettingsOperationKind_ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_PICTURE_SET:
+		return buildAccountProfilePictureIQ(id, input.ProfilePicture)
+	case waappv1.AccountSettingsOperationKind_ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_PICTURE_REMOVE:
+		return buildAccountProfilePictureIQ(id, nil)
 	default:
 		return chatdNode{}
 	}
@@ -79,6 +86,18 @@ func buildVerifyAccountEmailOtpIQ(id string, code string) chatdNode {
 	return buildAccountIQ(id, "get", []chatdNode{{Tag: "verify_email", Content: []chatdNode{{Tag: "code", Content: code}}}})
 }
 
+func buildAccountProfilePictureIQ(id string, image []byte) chatdNode {
+	picture := chatdNode{Tag: "picture", Attrs: map[string]string{"type": "image"}}
+	if len(image) > 0 {
+		picture.Content = append([]byte(nil), image...)
+	}
+	return chatdNode{
+		Tag:     "iq",
+		Attrs:   map[string]string{"xmlns": "w:profile:picture", "id": id, "to": "s.whatsapp.net", "type": "set"},
+		Content: []chatdNode{picture},
+	}
+}
+
 func accountSettingsResultFromIQ(kind waappv1.AccountSettingsOperationKind, node chatdNode) EngineAccountSettingsResult {
 	if err := chatdIQError(node); err != nil {
 		return EngineAccountSettingsResult{Status: waappv1.AccountSettingsOperationStatus_ACCOUNT_SETTINGS_OPERATION_STATUS_REJECTED, Err: err}
@@ -90,8 +109,22 @@ func accountSettingsResultFromIQ(kind waappv1.AccountSettingsOperationKind, node
 		return emailOtpRequestResultFromIQ(node)
 	case waappv1.AccountSettingsOperationKind_ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_EMAIL_OTP_VERIFY:
 		return emailOtpVerifyResultFromIQ(node)
+	case waappv1.AccountSettingsOperationKind_ACCOUNT_SETTINGS_OPERATION_KIND_ACCOUNT_PROFILE_PICTURE_SET:
+		return accountProfilePictureSetResultFromIQ(node)
 	default:
 		return EngineAccountSettingsResult{Status: waappv1.AccountSettingsOperationStatus_ACCOUNT_SETTINGS_OPERATION_STATUS_ACCEPTED}
+	}
+}
+
+func accountProfilePictureSetResultFromIQ(node chatdNode) EngineAccountSettingsResult {
+	picture, ok := chatdChild(node, "picture")
+	if !ok {
+		return EngineAccountSettingsResult{Status: waappv1.AccountSettingsOperationStatus_ACCOUNT_SETTINGS_OPERATION_STATUS_ACCEPTED}
+	}
+	return EngineAccountSettingsResult{
+		Status:           waappv1.AccountSettingsOperationStatus_ACCOUNT_SETTINGS_OPERATION_STATUS_ACCEPTED,
+		ProfilePictureID: contactProfilePictureIDFromPicture(picture),
+		HasStaging:       chatdNodeBool(picture, "has_staging"),
 	}
 }
 

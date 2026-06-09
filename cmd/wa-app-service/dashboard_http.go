@@ -50,6 +50,9 @@ func runDashboardHTTP(ctx context.Context, listenAddr, staticDir string, service
 	mux.HandleFunc("/api/wa/account-settings/email", server.handleSetAccountEmail)
 	mux.HandleFunc("/api/wa/account-settings/email/otp/request", server.handleRequestAccountEmailOtp)
 	mux.HandleFunc("/api/wa/account-settings/email/otp/verify", server.handleVerifyAccountEmailOtp)
+	mux.HandleFunc("/api/wa/account-settings/profile/name", server.handleSetAccountProfileName)
+	mux.HandleFunc("/api/wa/account-settings/profile/picture", server.handleSetAccountProfilePicture)
+	mux.HandleFunc("/api/wa/account-settings/profile/picture/remove", server.handleRemoveAccountProfilePicture)
 	mux.HandleFunc("/api/wa/accounts", server.handleAccounts)
 	mux.HandleFunc("/api/wa/accounts/", server.handleAccount)
 	mux.HandleFunc("/api/wa/client-profiles", server.handleClientProfiles)
@@ -755,6 +758,22 @@ func writeProtoJSON(w http.ResponseWriter, status int, value proto.Message) {
 		return
 	}
 	_, _ = w.Write(data)
+}
+
+func readProtoJSONPayload(w http.ResponseWriter, r *http.Request, maxBytes int64, value proto.Message, message string) bool {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBytes))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return false
+	}
+	if len(bytes.TrimSpace(body)) == 0 {
+		return true
+	}
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(body, value); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": message})
+		return false
+	}
+	return true
 }
 
 func positiveInt(value string, fallback int) int {
