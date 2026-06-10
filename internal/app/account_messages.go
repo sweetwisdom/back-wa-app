@@ -114,7 +114,7 @@ func accountMessageDirection(kind waappv1.InboundMessageKind) waappv1.AccountMes
 }
 
 func accountMessageDisplayText(text string) string {
-	text = strings.TrimSpace(text)
+	text = normalizeWAFramedDisplayText(strings.TrimSpace(text))
 	if text == "" {
 		return ""
 	}

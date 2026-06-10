@@ -59,13 +59,22 @@ function MessageLines({ text }: { text: string }) {
 function linkify(line: string) {
   const tokens = line.split(/(https?:\/\/\S+)/g);
   return tokens.map((token, index) => {
-    if (!/^https?:\/\//.test(token)) return token;
+    if (!/^https?:\/\//.test(token)) return markdownInline(token, `text-${index}`);
     const url = trimLink(token);
     return (
       <a className="text-emerald-700 underline underline-offset-2" href={url} key={`${index}-${token}`} rel="noreferrer" target="_blank">
         {url}
       </a>
     );
+  });
+}
+
+function markdownInline(text: string, keyPrefix: string) {
+  const parts = text.split(/(\*[^*\n]{1,120}\*)/g);
+  return parts.map((part, index) => {
+    const match = part.match(/^\*([^*\n].*?)\*$/);
+    if (!match) return part;
+    return <strong className="font-semibold text-foreground" key={`${keyPrefix}-${index}`}>{match[1]}</strong>;
   });
 }
 
