@@ -30,16 +30,13 @@ export function WaRegistrationChannelButtons({ status, elapsedSeconds, disabled,
             key={method.value}
             type="button"
             variant={state.ready ? 'default' : state.cooldown > 0 ? 'secondary' : 'outline'}
-            className="h-auto min-h-14 justify-between gap-3 px-3 py-2 text-left"
+            className="h-10 justify-between gap-3 px-3"
             disabled={disabled || !state.ready}
             aria-label={`${method.label} ${state.label}`}
-            title={state.title || method.description}
+            title={state.title}
             onClick={() => method.directRequest && onStart(method)}
           >
-            <span className="grid min-w-0 gap-0.5">
-              <span className="truncate text-sm font-semibold">{method.label}</span>
-              <span className="truncate text-[11px] font-normal opacity-80">{method.description}</span>
-            </span>
+            <span className="truncate text-sm font-medium">{method.label}</span>
             <Badge variant={state.badge} className="shrink-0">
               <state.Icon />
               {state.label}
@@ -52,16 +49,16 @@ export function WaRegistrationChannelButtons({ status, elapsedSeconds, disabled,
 }
 
 function channelState(method: RegistrationChannelMethodOption, status: WaProbeStatus | null, elapsedSeconds: number) {
-  if (!status) return { ready: false, cooldown: 0, label: '先检测', badge: 'outline' as const, Icon: CircleDashed, title: '先检测号码，再选择可用通道' };
+  if (!status) return { ready: false, cooldown: 0, label: '先检测', badge: 'outline' as const, Icon: CircleDashed, title: '先检测' };
   const cooldown = registrationMethodCooldownSeconds(status, method.value, elapsedSeconds);
   if (cooldown > 0) {
-    return { ready: false, cooldown, label: countdownLabel(cooldown), badge: 'secondary' as const, Icon: Clock3, title: `冷却中，剩余 ${countdownLabel(cooldown)}` };
+    return { ready: false, cooldown, label: countdownLabel(cooldown), badge: 'secondary' as const, Icon: Clock3, title: '冷却中' };
   }
   if (!method.directRequest) {
-    return { ready: false, cooldown: 0, label: '不支持', badge: 'outline' as const, Icon: PhoneMissed, title: method.disabledReason || method.description };
+    return { ready: false, cooldown: 0, label: '不支持', badge: 'outline' as const, Icon: PhoneMissed, title: '不支持' };
   }
   if (registrationMethodAvailable(status, method.value, elapsedSeconds)) {
-    return { ready: true, cooldown: 0, label: '可用', badge: 'default' as const, Icon: CheckCircle2, title: method.description };
+    return { ready: true, cooldown: 0, label: '可用', badge: 'default' as const, Icon: CheckCircle2, title: '可用' };
   }
   return { ready: false, cooldown: 0, label: '不可用', badge: 'outline' as const, Icon: XCircle, title: `${method.label} 当前不可用` };
 }

@@ -6,48 +6,46 @@ export type RegistrationMethodOption = {
   value: VerificationDeliveryMethod | RegistrationLoginMethod;
   code: string;
   label: string;
-  description: string;
 };
 export type SelectableRegistrationMethodOption = Omit<RegistrationMethodOption, 'value'> & {
   value: VerificationDeliveryMethod;
 };
 export type RegistrationChannelMethodOption = SelectableRegistrationMethodOption & {
   directRequest: boolean;
-  disabledReason?: string;
 };
 
 export const selectableRegistrationMethods: SelectableRegistrationMethodOption[] = [
-  methodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_SMS, 'sms', '服务端下发短信验证码'),
-  methodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_VOICE, 'voice', '语音电话播报验证码'),
-  methodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_WA_OLD, 'wa_old', '旧设备 / 已登录 WhatsApp 验证'),
-  methodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_EMAIL_OTP, 'email_otp', '邮箱验证码'),
-  methodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_SEND_SMS, 'send_sms', '从本机发送短信到 WhatsApp'),
+  methodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_SMS, 'sms'),
+  methodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_VOICE, 'voice'),
+  methodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_WA_OLD, 'wa_old'),
+  methodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_EMAIL_OTP, 'email_otp'),
+  methodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_SEND_SMS, 'send_sms'),
 ];
 export const visibleRegistrationChannelMethods: RegistrationChannelMethodOption[] = [
-  channelMethodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_FLASH, 'flash', '未接来电验证，当前服务不支持', false, '当前服务不支持未接来电验证'),
+  channelMethodOption(VerificationDeliveryMethod.VERIFICATION_DELIVERY_METHOD_FLASH, 'flash', false),
   ...selectableRegistrationMethods.map((method) => ({ ...method, directRequest: true })),
 ];
 
 export const apkSupportedLoginRegistrationMethods = [
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_SMS, 'sms', '服务端下发短信验证码'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_VOICE, 'voice', '语音电话播报验证码'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_FLASH, 'flash', 'Flash call / 未接来电验证，需要 Android 设备侧监听'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_WA_OLD, 'wa_old', '旧设备 / 已登录 WhatsApp 验证'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_EMAIL_OTP, 'email_otp', '邮箱验证码'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_SEND_SMS, 'send_sms', '从本机发送短信到 WhatsApp'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_SILENT_AUTH, 'silent_auth', '静默验证专用流程'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_SILENT_AUTH_TS43, 'silent_auth_ts_43', 'TS43 静默验证专用流程'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_AUTOCONF, 'autoconf', '自动确认专用流程'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_DEEPLINK_OTP, 'deeplink_otp', 'Deep Link OTP 专用流程'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_ACCOUNT_TRANSFER, 'acc_tr', '账号迁移验证'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_PASSKEY, 'passkey', 'Passkey 登录'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_DISCOVERABLE_CREDENTIAL, 'discoverable_credential', '可发现凭据登录'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_OAUTH_EMAIL, 'oauth_email', 'OAuth 邮箱验证'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_RECAPTCHA, 'recaptcha', '反滥用 proof'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_TWO_FACTOR_PIN, 'twofac_pin', '两步验证 PIN'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_PASSWORD, 'password', '密码验证'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_WIPE_FULL, 'wipe_full', '完整重置'),
-  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_WIPE_OFFLINE, 'wipe_offline', '离线重置'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_SMS, 'sms'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_VOICE, 'voice'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_FLASH, 'flash'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_WA_OLD, 'wa_old'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_EMAIL_OTP, 'email_otp'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_SEND_SMS, 'send_sms'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_SILENT_AUTH, 'silent_auth'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_SILENT_AUTH_TS43, 'silent_auth_ts_43'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_AUTOCONF, 'autoconf'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_DEEPLINK_OTP, 'deeplink_otp'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_ACCOUNT_TRANSFER, 'acc_tr'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_PASSKEY, 'passkey'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_DISCOVERABLE_CREDENTIAL, 'discoverable_credential'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_OAUTH_EMAIL, 'oauth_email'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_RECAPTCHA, 'recaptcha'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_TWO_FACTOR_PIN, 'twofac_pin'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_PASSWORD, 'password'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_WIPE_FULL, 'wipe_full'),
+  loginMethodOption(RegistrationLoginMethod.REGISTRATION_LOGIN_METHOD_WIPE_OFFLINE, 'wipe_offline'),
 ];
 
 export function registrationMethodStatus(status: WaProbeStatus, method: VerificationDeliveryMethod) {
@@ -76,16 +74,16 @@ export function registrationChannelsHardBlocked(status: WaProbeStatus | null) {
   return Boolean(status?.blocked === true || status?.accountFlow === 'invalid_number');
 }
 
-function methodOption(value: VerificationDeliveryMethod, code: string, description: string): SelectableRegistrationMethodOption {
-  return { value, code, label: methodLabel(code), description };
+function methodOption(value: VerificationDeliveryMethod, code: string): SelectableRegistrationMethodOption {
+  return { value, code, label: methodLabel(code) };
 }
 
-function channelMethodOption(value: VerificationDeliveryMethod, code: string, description: string, directRequest: boolean, disabledReason?: string): RegistrationChannelMethodOption {
-  return { ...methodOption(value, code, description), directRequest, disabledReason };
+function channelMethodOption(value: VerificationDeliveryMethod, code: string, directRequest: boolean): RegistrationChannelMethodOption {
+  return { ...methodOption(value, code), directRequest };
 }
 
-function loginMethodOption(value: RegistrationLoginMethod, code: string, description: string): RegistrationMethodOption {
-  return { value, code, label: methodLabel(code), description };
+function loginMethodOption(value: RegistrationLoginMethod, code: string): RegistrationMethodOption {
+  return { value, code, label: methodLabel(code) };
 }
 
 function methodStatusMatches(status: VerificationMethodStatus, method: VerificationDeliveryMethod) {

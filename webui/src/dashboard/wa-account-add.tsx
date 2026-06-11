@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, KeyRound, Search, ShieldAlert } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CheckCircle2, KeyRound, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { probeWaPhoneSMS, registerWaPhone, submitWaRegistrationOTP, type WaWorkflowResponse } from './wa-api';
 import { WhatsAppIcon } from './wa-brand-icon';
@@ -16,7 +15,7 @@ import { registrationAnyMethodAvailable, registrationChannelsHardBlocked, type S
 import { WaResultPanel } from './wa-result-panel';
 import { resolveWaPhoneTarget, type WaResolvedPhone } from './wa-utils';
 type ProbeState = { target: WaResolvedPhone; result: WaWorkflowResponse } | null;
-type PendingRegistration = { target: WaResolvedPhone; accountID: string; verificationRequestID: string };
+type PendingRegistration = { accountID: string };
 type Props = { disabled?: boolean; onChanged: () => void | Promise<void>; onDone: (message: string) => void; onError: (message: string) => void };
 export function WaAccountAdd({ disabled, onChanged, onDone, onError }: Props) {
   const [phone, setPhone] = useState('');
@@ -41,7 +40,6 @@ export function WaAccountAdd({ disabled, onChanged, onDone, onError }: Props) {
   const channelsHardBlocked = registrationChannelsHardBlocked(channelStatus);
   const canRegister = samePhone && registrationAnyMethodAvailable(channelStatus, cooldownElapsedSeconds) && !channelsHardBlocked;
   const detected = samePhone && Boolean(channelStatus);
-  const showHelp = pending || blocked || canRegister || Boolean(activeRegistrationResult);
   const badgeVariant = pending ? 'default' : blocked ? 'destructive' : canRegister ? 'default' : detected ? 'secondary' : 'outline';
   const badgeLabel = pending ? '等待 OTP' : blocked ? '已封禁' : canRegister ? '可注册' : detected ? '无可直发' : '待检测';
 
@@ -54,7 +52,7 @@ export function WaAccountAdd({ disabled, onChanged, onDone, onError }: Props) {
 
   async function runProbe() {
     const resolved = resolveWaPhoneTarget(phone, countryCallingCode);
-    if (!resolved.target) return onError(resolved.error || '请输入手机号和国家拨号码。');
+    if (!resolved.target) return onError(resolved.error || '请输入手机号和国家拨号码');
     setBusy(true);
     try {
       setRegistrationResult(null);
@@ -70,9 +68,9 @@ export function WaAccountAdd({ disabled, onChanged, onDone, onError }: Props) {
     }
   }
   async function submitOTP() {
-    if (!pending) return onError('没有等待中的注册 OTP。');
+    if (!pending) return onError('没有等待中的 OTP');
     const code = otp.trim();
-    if (!code) return onError('请输入 OTP。');
+    if (!code) return onError('请输入 OTP');
     setBusy(true);
     try {
       const result = await submitWaRegistrationOTP(pending.accountID, code);
@@ -89,8 +87,8 @@ export function WaAccountAdd({ disabled, onChanged, onDone, onError }: Props) {
   }
   async function startRegistration(method: SelectableRegistrationMethodOption) {
     const resolved = resolveWaPhoneTarget(phone, countryCallingCode);
-    if (!resolved.target) return onError(resolved.error || '请输入手机号和国家拨号码。');
-    if (!samePhone || !channelStatus) return onError('请先完成检测，再选择可用通道发起注册。');
+    if (!resolved.target) return onError(resolved.error || '请输入手机号和国家拨号码');
+    if (!samePhone || !channelStatus) return onError('请先检测');
     setBusy(true);
     try {
       const result = await registerWaPhone(resolved.target.input, method.value);
@@ -103,10 +101,10 @@ export function WaAccountAdd({ disabled, onChanged, onDone, onError }: Props) {
         return;
       }
       const accountID = workflowText(result, 'wa_account_id');
-      if (accountID) setPending({ target: resolved.target, accountID, verificationRequestID: workflowText(result, 'verification_request_id') });
+      if (accountID) setPending({ accountID });
       setProbe(null);
       setOtp('');
-      onDone(accountID ? `${method.label} OTP 已发送，请输入验证码` : `${method.label} 注册流程已发起`);
+      onDone(accountID ? 'OTP 已发送' : '已发起');
       await onChanged();
     } catch (error) {
       onError(error instanceof Error ? error.message : String(error));
@@ -124,8 +122,7 @@ export function WaAccountAdd({ disabled, onChanged, onDone, onError }: Props) {
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-3">
         <div className="grid gap-1">
-          <CardTitle className="inline-flex items-center gap-2 text-base"><WhatsAppIcon className="size-5" />添加并注册 WAAccount</CardTitle>
-          <CardDescription>先检测手机号/SMS 状态；检测通过后才发起注册并持久化账号。</CardDescription>
+          <CardTitle className="inline-flex items-center gap-2 text-base"><WhatsAppIcon className="size-5" />添加 WAAccount</CardTitle>
         </div>
         <Badge variant={badgeVariant}>
           {pending ? <KeyRound size={12} /> : canRegister ? <CheckCircle2 size={12} /> : null}
@@ -148,17 +145,11 @@ export function WaAccountAdd({ disabled, onChanged, onDone, onError }: Props) {
         </FieldGroup>
         {showChannels && (
           <Field>
-            <FieldLabel>注册 / 登录通道</FieldLabel>
+            <FieldLabel>通道</FieldLabel>
             <WaRegistrationChannelButtons status={channelStatus} elapsedSeconds={cooldownElapsedSeconds} disabled={busy || disabled || Boolean(pending) || channelsHardBlocked} onStart={(method) => void startRegistration(method)} />
-            <FieldDescription>检测后按 APK 可见 fallback 展示；不支持的通道仅提示，冷却通道显示倒计时。</FieldDescription>
           </Field>
         )}
-        {showHelp && <Alert variant={blocked ? 'destructive' : 'default'}>
-          {blocked && <ShieldAlert className="size-4" />}
-          {blocked && <AlertTitle>号码被拒绝/封禁</AlertTitle>}
-          <AlertDescription>{registrationHelp(Boolean(pending), canRegister, Boolean(activeRegistrationResult), blocked)}</AlertDescription>
-        </Alert>}
-        {pending && <WaRegistrationOtpCard phone={pending.target.e164} verificationRequestID={pending.verificationRequestID} value={otp} busy={busy} onChange={setOtp} onSubmit={() => void submitOTP()} />}
+        {pending && <WaRegistrationOtpCard value={otp} busy={busy} onChange={setOtp} onSubmit={() => void submitOTP()} />}
         {(activeRegistrationResult || probe || busy) && (
           <Card className="p-3">
             <WaResultPanel title={activeRegistrationResult ? '注册结果' : '检测结果'} phone={registrationSamePhone ? registrationTarget?.e164 || '' : samePhone ? probe?.target.e164 || '' : ''} result={activeRegistrationResult || (samePhone ? probe?.result || null : null)} loading={busy} showMethods={!showChannels} />
@@ -167,14 +158,6 @@ export function WaAccountAdd({ disabled, onChanged, onDone, onError }: Props) {
       </CardContent>
     </Card>
   );
-}
-function registrationHelp(pending: boolean, canRegister: boolean, hasRegistrationResult: boolean, blocked: boolean) {
-  if (blocked) return 'WA 已拒绝该号码；请停止重复请求，建议更换号码或注册通道。';
-  if (pending) return 'OTP 已发送，请在本页输入验证码完成注册。';
-  if (canRegister && hasRegistrationResult) return '当前通道已返回结果；仍有其他可用通道，可直接继续尝试。';
-  if (canRegister) return '检测通过，可以点击可用通道发起注册。';
-  if (hasRegistrationResult) return '本次注册请求已返回结果，可重新检测后再继续。';
-  return '检测通过前不会持久化 WAAccount。';
 }
 function probeMatchesValues(probe: ProbeState, phone: string, countryCallingCode: string) {
   if (!probe) return false;
@@ -187,8 +170,8 @@ function workflowText(result: WaWorkflowResponse, key: keyof WaWorkflowResponse)
 function registrationFailureMessage(result: WaWorkflowResponse, status: ReturnType<typeof waProbeStatus>) {
   const detail = status.failureReason || result.error_message || result.status || '';
   const reason = accountReasonLabel(detail);
-  if (status.blocked) return '号码被 WA 拒绝/封禁，先停止重试，建议更换号码或注册通道。';
-  if (status.accountFlow === 'invalid_number') return reason || '号码格式被 WA 拒绝，请检查国家拨号码和手机号。';
-  if (status.accountFlow === 'rate_limited') return reason || 'WA 注册请求处于冷却，请稍后再试。';
-  return reason || 'WA 注册流程发起失败';
+  if (status.blocked) return '号码被拒绝/封禁';
+  if (status.accountFlow === 'invalid_number') return reason || '号码无效';
+  if (status.accountFlow === 'rate_limited') return reason || '请求冷却中';
+  return reason || '注册失败';
 }
