@@ -34,6 +34,9 @@ func buildWASafeEnvelope(plain []byte, serverPublicKeyHex string, attestation na
 		return waSafeEnvelope{}, err
 	}
 	body := "ENC=" + enc
+	if !attestation.ready() {
+		return waSafeEnvelope{Body: body, Enc: enc}, nil
+	}
 	signature, authorization, err := attestation.sign([]byte(enc))
 	if err != nil {
 		return waSafeEnvelope{}, err
@@ -42,18 +45,6 @@ func buildWASafeEnvelope(plain []byte, serverPublicKeyHex string, attestation na
 }
 
 func ensureNativeSoftwareAttestation(state *nativeState) error {
-	if state == nil || state.Attestation.ready() {
-		return nil
-	}
-	challenge, err := nativeAttestationChallenge(*state)
-	if err != nil {
-		return err
-	}
-	attestation, err := newNativeSoftwareAttestation(challenge, time.Now().UTC())
-	if err != nil {
-		return err
-	}
-	state.Attestation = attestation
 	return nil
 }
 
