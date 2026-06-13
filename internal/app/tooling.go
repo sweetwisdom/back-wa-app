@@ -224,8 +224,11 @@ func (e *NativeEngine) BuildRegistrationRequest(ctx context.Context, req *waappv
 		}
 	default:
 		if hasState {
-			base, raw := e.codeParams(phone, method, state, "")
-			params.merge(base, raw)
+			built, err := e.codeRequestOrderedParamsWithWamsys(ctx, phone, method, state, "", req.GetWamsysCapture(), req.GetIncludeWamsysMap())
+			if err != nil {
+				return nil, err
+			}
+			params = built
 		} else {
 			params.set("cc", phoneCC(phone), false)
 			params.set("in", phoneNational(phone), false)

@@ -100,6 +100,7 @@ func (e *NativeEngine) probeAccountWithState(ctx context.Context, input EngineRe
 	if err := e.applyRuntimeWamsys(ctx, waappv1.RegistrationRequestKind_REGISTRATION_REQUEST_KIND_EXIST, input.Phone, state, params, rawKeys); err != nil {
 		return EngineProbeResult{Status: waappv1.AccountProbeStatus_ACCOUNT_PROBE_STATUS_REJECTED, Err: err}
 	}
+	logNativeRegistrationMapShape("exist", input.Phone, input.DeliveryMethod, params, rawKeys)
 	plain := renderNativePlain(params, rawKeys)
 	client, err := e.httpForProxy()
 	if err != nil {
@@ -144,6 +145,7 @@ func (e *NativeEngine) requestVerificationCodeWithState(ctx context.Context, inp
 	if err != nil {
 		return EngineCodeResult{Status: waappv1.VerificationRequestStatus_VERIFICATION_REQUEST_STATUS_REJECTED, Err: err}, state
 	}
+	logNativeRegistrationOrderedShape("code", input.Phone, input.DeliveryMethod, params)
 	plain := params.render()
 	client, err := e.httpForProxy()
 	if err != nil {
@@ -201,6 +203,7 @@ func (e *NativeEngine) SubmitVerificationCode(ctx context.Context, input EngineS
 		return EngineRegisterResult{Status: waappv1.RegistrationStatus_REGISTRATION_STATUS_REJECTED, Err: err}
 	}
 	params, rawKeys := e.registerParams(input.Phone, input.DeliveryMethod, input.Code, state, input.AuthCodeContext)
+	logNativeRegistrationMapShape("register", input.Phone, input.DeliveryMethod, params, rawKeys)
 	plain := renderNativePlain(params, rawKeys)
 	client, err := e.httpForProxy()
 	if err != nil {

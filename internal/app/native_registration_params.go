@@ -49,6 +49,10 @@ func (e *NativeEngine) registrationToken(phone *waappv1.PhoneTarget, state nativ
 }
 
 func (e *NativeEngine) codeRequestOrderedParams(ctx context.Context, phone *waappv1.PhoneTarget, method waappv1.VerificationDeliveryMethod, state nativeState, authCodeContext string) (orderedParams, error) {
+	return e.codeRequestOrderedParamsWithWamsys(ctx, phone, method, state, authCodeContext, nil, true)
+}
+
+func (e *NativeEngine) codeRequestOrderedParamsWithWamsys(ctx context.Context, phone *waappv1.PhoneTarget, method waappv1.VerificationDeliveryMethod, state nativeState, authCodeContext string, wamsysCapture *waappv1.WamsysCapture, includeWamsys bool) (orderedParams, error) {
 	methodName := registrationMethodName(method, "sms")
 	fields := nativeDeviceMapFields(state)
 	params := orderedParams{}
@@ -75,9 +79,13 @@ func (e *NativeEngine) codeRequestOrderedParams(ctx context.Context, phone *waap
 	}
 	applyNativeE2EParams(&params, state)
 	applyNativeCodeRequestMapParams(&params, fields, methodName)
-	capture, err := e.wamsysProvider().RegistrationMaterial(ctx, wamsysMaterialInput{Kind: waappv1.RegistrationRequestKind_REGISTRATION_REQUEST_KIND_CODE, Phone: phone, State: state})
-	if err != nil {
-		return nil, err
+	var capture *waappv1.WamsysCapture
+	if includeWamsys {
+		var err error
+		capture, err = e.wamsysProvider().RegistrationMaterial(ctx, wamsysMaterialInput{Capture: wamsysCapture, Kind: waappv1.RegistrationRequestKind_REGISTRATION_REQUEST_KIND_CODE, Phone: phone, State: state})
+		if err != nil {
+			return nil, err
+		}
 	}
 	applyOrderedWamsysKey(&params, capture, "gpia")
 	addOptionalRawParam(&params, "db", fields["db"])
@@ -260,9 +268,7 @@ func codeDeviceMap(method string, state nativeState) map[string]string {
 }
 
 func nativePreferSMSOverFlash(method string, fields map[string]string) string {
-	if verificationMethodCode(method) == "sms" {
-		return "true"
-	}
+	_ = method
 	return firstNonEmpty(fields["prefer_sms_over_flash"], "false")
 }
 
